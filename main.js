@@ -1,7 +1,13 @@
 ;(function init() {
   const LANG = 'jpn+eng'
-  const WORKER_PATH = 'https://unpkg.com/tesseract.js@5.0.5/dist/worker.min.js'
-  const CORE_PATH = 'https://unpkg.com/tesseract.js-core@5.0.0/tesseract-core.wasm.js'
+  const WORKER_PATHS = [
+    './vendor/tesseract/worker.min.js',
+    'https://unpkg.com/tesseract.js@5.0.5/dist/worker.min.js',
+  ]
+  const CORE_PATHS = [
+    './vendor/tesseract/tesseract-core.wasm.js',
+    'https://unpkg.com/tesseract.js-core@5.0.0/tesseract-core.wasm.js',
+  ]
   const LANG_PATH = 'https://tessdata.projectnaptha.com/4.0.0_fast'
 
   const dropZone = document.getElementById('drop-zone')
@@ -24,6 +30,10 @@
   let processing = false
   let pdfReady = typeof pdfjsLib !== 'undefined'
   let pdfError = null
+
+  if (pdfReady) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdfjs/pdf.worker.min.js'
+  }
 
   clearBtn.addEventListener('click', () => {
     resultsEl.innerHTML = ''
@@ -84,16 +94,7 @@
     if (workerReady) return
     engineStatus.textContent = '初期化中...'
     try {
-      worker = await Tesseract.createWorker({
-        workerPath: WORKER_PATH,
-        corePath: CORE_PATH,
-        langPath: LANG_PATH,
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            setProgress(`${Math.round((m.progress || 0) * 100)}%`)
-          }
-        },
-      })
+      worker = await createWorkerWithFallback()
       await worker.loadLanguage(LANG)
       await worker.initialize(LANG)
       workerReady = true
@@ -226,19 +227,55 @@
 
   async function ensurePdf() {
     if (pdfReady && typeof pdfjsLib !== 'undefined') return true
-    const primary = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.min.js'
-    const secondary = 'https://unpkg.com/pdfjs-dist@4.7.76/build/pdf.min.js'
 
-    if (await loadScript(primary).catch(() => false) || (await loadScript(secondary).catch(() => false))) {
-      if (typeof pdfjsLib !== 'undefined') {
-        pdfjsLib.GlobalWorkerOptions.workerSrc =
-          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.js'
-        pdfReady = true
-        return true
+    const candidates = [
+      './vendor/pdfjs/pdf.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',
+      'https://unpkg.com/pdfjs-dist@2.16.105/build/pdf.min.js',
+    ]
+
+    for (const src of candidates) {
+      try {
+        await loadScript(src)
+        if (typeof pdfjsLib !== 'undefined') {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = src.includes('vendor')
+            ? './vendor/pdfjs/pdf.worker.min.js'
+            : src.replace('pdf.min.js', 'pdf.worker.min.js')
+          pdfReady = true
+          return true
+        }
+      } catch (_) {
+        continue
       }
     }
-    pdfError = 'PDFライブラリ(pdf.js)の読み込みに失敗しました。ネットワークやCDNの許可を確認してください。画像のOCRはそのまま利用できます。'
+
+    pdfError =
+      'PDFライブラリ(pdf.js)の読み込みに失敗しました。ネットワークやCDNの許可を確認してください。画像のOCRはそのまま利用できます。'
     return false
+  }
+
+  async function createWorkerWithFallback() {
+    let lastErr
+    for (let i = 0; i < WORKER_PATHS.length; i++) {
+      const workerPath = WORKER_PATHS[i]
+      const corePath = CORE_PATHS[i] || CORE_PATHS[0]
+      try {
+        return await Tesseract.createWorker({
+          workerPath,
+          corePath,
+          langPath: LANG_PATH,
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              setProgress(`${Math.round((m.progress || 0) * 100)}%`)
+            }
+          },
+        })
+      } catch (err) {
+        console.error('worker init failed at', workerPath, err)
+        lastErr = err
+      }
+    }
+    throw lastErr || new Error('worker init failed')
   }
 
   function loadScript(src) {

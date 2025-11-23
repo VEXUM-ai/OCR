@@ -18,6 +18,8 @@
 - `index.html` : UI 本体（CDN から pdf.js / tesseract.js を読み込み）
 - `style.css` : スタイル
 - `main.js` : 処理ロジック
+- `vendor/pdfjs/*` : pdf.js 本体/worker のローカルコピー（CDNブロック時に利用）
+- `vendor/tesseract/*` : tesseract worker/wasm のローカルコピー（CDNブロック時に利用）
 
 ## Vercel へのデプロイ（GitHub 経由）
 1. このリポジトリを GitHub にプッシュ。  
@@ -31,7 +33,7 @@
 ## 設定メモ
 - 認識言語は `jpn+eng`。変更する場合は `main.js` の `LANG` を更新し、同時に `LANG_PATH` を適宜差し替えてください。
 - PDF は 1.5 倍スケールでレンダリングしてから OCR しています。精度を上げたい場合は `viewport` の `scale` を大きくしてください。
-- 企業ネットワーク等で CDN がブロックされる場合は、`WORKER_PATH` / `CORE_PATH` / `LANG_PATH` / `pdf.worker.min.js` の URL を自前 CDN に差し替えてください。
+- 企業ネットワーク等で CDN がブロックされる場合は、同梱の `vendor/` を優先して使うよう main.js でフォールバックしています。`LANG_PATH`（学習データ）は外部参照なので、完全オフラインが必要なら自前でホストしてください。
 
 ## バージョン管理メモ
 ```
