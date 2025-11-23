@@ -17,7 +17,7 @@ let worker = null
 let workerReady = false
 let processing = false
 
-// pdf.js worker
+// pdf.js worker (CDN)
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.js'
 
 clearBtn.addEventListener('click', () => {
@@ -26,7 +26,6 @@ clearBtn.addEventListener('click', () => {
 })
 
 dropZone.addEventListener('click', () => fileInput.click())
-
 fileInput.addEventListener('change', (e) => handleFiles(e.target.files))
 
 dropZone.addEventListener('dragover', (e) => {
