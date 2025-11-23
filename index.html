@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ブラウザOCR (画像 / PDF)</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">ブラウザ内で完結</p>
+      <h1>画像・PDF OCR ワークスペース</h1>
+      <p class="sub">JPG / PNG / PDF をアップロードすると、その場で文字起こしします。ファイルはサーバーへ送信されません。</p>
+    </div>
+    <button id="clear-btn" class="ghost">結果をクリア</button>
+  </header>
+
+  <main class="grid">
+    <section class="card wide">
+      <h2>ファイルをアップロード</h2>
+      <p class="muted">複数ファイルもまとめて解析できます。</p>
+      <label id="drop-zone" class="drop">
+        <div class="drop-icon">📤</div>
+        <p class="drop-title">ここにドラッグ＆ドロップ</p>
+        <p class="muted">またはクリックしてファイルを選択</p>
+        <p class="tiny muted">対応: JPG / PNG / PDF</p>
+        <input id="file-input" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple hidden />
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>ステータス</h2>
+      <div class="status-list">
+        <div class="status-row">
+          <span>OCRエンジン</span>
+          <span id="engine-status" class="badge">未初期化</span>
+        </div>
+        <div class="status-row">
+          <span>処理状態</span>
+          <span id="process-status" class="badge">待機中</span>
+        </div>
+        <div class="status-row">
+          <span>進捗</span>
+          <span id="progress" class="muted">-</span>
+        </div>
+        <div id="error" class="error hidden"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>精度を上げるコツ</h2>
+      <ul class="tips">
+        <li>斜めの画像はPDF化してからOCRすると精度が上がります。</li>
+        <li>文字が小さい場合はPDFを拡大した状態でOCRするのが効果的です。</li>
+        <li>日本語+英語のモデルを使用しています（LANG: jpn+eng）。</li>
+      </ul>
+    </section>
+  </main>
+
+  <section class="card full">
+    <div class="card-head">
+      <div>
+        <h2>結果</h2>
+        <p class="muted">ファイルごとにOCR結果を表示します。</p>
+      </div>
+      <span class="muted" id="total-count">総件数: 0</span>
+    </div>
+    <div id="results" class="results"></div>
+  </section>
+
+  <script src="./main.js"></script>
+</body>
+</html>
