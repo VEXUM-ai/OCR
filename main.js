@@ -18,17 +18,12 @@
     console.error('DOM not ready: essential elements missing')
     return
   }
-  if (typeof pdfjsLib === 'undefined') {
-    setError('pdf.js の読み込みに失敗しました。CDNへアクセスできるか確認してください。')
-    return
-  }
-
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.js'
 
   let worker = null
   let workerReady = false
   let processing = false
+  let pdfReady = typeof pdfjsLib !== 'undefined'
+  let pdfError = null
 
   clearBtn.addEventListener('click', () => {
     resultsEl.innerHTML = ''
@@ -62,6 +57,14 @@
       for (const file of files) {
         const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
         if (isPdf) {
+          const ok = await ensurePdf()
+          if (!ok) {
+            setError(
+              pdfError ||
+                'PDFの処理に必要な pdf.js を読み込めませんでした（画像のOCRは利用できます）。'
+            )
+            continue
+          }
           await processPdf(file)
         } else {
           await processImage(file)
@@ -219,6 +222,34 @@
   function updateCount() {
     const count = resultsEl.children.length
     totalCount.textContent = `総件数: ${count}`
+  }
+
+  async function ensurePdf() {
+    if (pdfReady && typeof pdfjsLib !== 'undefined') return true
+    const primary = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.min.js'
+    const secondary = 'https://unpkg.com/pdfjs-dist@4.7.76/build/pdf.min.js'
+
+    if (await loadScript(primary).catch(() => false) || (await loadScript(secondary).catch(() => false))) {
+      if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/pdf.worker.min.js'
+        pdfReady = true
+        return true
+      }
+    }
+    pdfError = 'PDFライブラリ(pdf.js)の読み込みに失敗しました。ネットワークやCDNの許可を確認してください。画像のOCRはそのまま利用できます。'
+    return false
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script')
+      s.src = src
+      s.async = true
+      s.onload = () => resolve(true)
+      s.onerror = () => reject(new Error(`load failed: ${src}`))
+      document.head.appendChild(s)
+    })
   }
 
   function fileToDataUrl(file) {
