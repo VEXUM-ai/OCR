@@ -40,7 +40,6 @@
     updateCount()
   })
 
-  dropZone.addEventListener('click', () => fileInput.click())
   fileInput.addEventListener('change', (e) => handleFiles(e.target.files))
 
   dropZone.addEventListener('dragover', (e) => {
@@ -87,6 +86,7 @@
       processing = false
       setProcessStatus('待機中', true)
       setProgress('-')
+      fileInput.value = ''
     }
   }
 
